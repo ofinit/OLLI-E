@@ -32,13 +32,8 @@ export default async function DashboardLayout({
         .from(aiModels)
         .where(eq(aiModels.isActive, true));
 
-      const POPULAR_NICHES = [
-        "Deep Research", "Expert Developer", "Website Builder", 
-        "Content Writer", "Image Crafter", "Data Analyst", 
-        "YouTube Scriptwriter", "SEO Optimizer"
-      ];
-
-      niches = rawNiches.filter((m: any) => POPULAR_NICHES.includes(m.name) && m.icon !== 'Box').slice(0, 8);
+      // Fetch all unique models for the sidebar
+      niches = rawNiches.filter((m: any) => m.icon !== 'Box');
     } catch (e) {
       const { mockNiches } = await import("@/lib/mock-data");
       niches = mockNiches.map(n => ({ id: n.id, name: n.nicheName, icon: n.icon }));

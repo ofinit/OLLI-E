@@ -27,9 +27,8 @@ export default async function DashboardPage() {
       .from(aiModels)
       .where(eq(aiModels.isActive, true));
     
-    // Filter strictly to the pre-defined popular selection to avoid overwhelming visual noise
-    // Filter out rows with default 'Box' icon directly to heavily avoid the old test duplicates
-    niches = modelsData.filter((m: any) => POPULAR_NICHES.includes(m.name) && m.icon !== 'Box').slice(0, 8);
+    // Show all active niches from the database
+    niches = modelsData.filter((m: any) => m.icon !== 'Box');
 
     const [u] = await db.select().from(users).where(eq(users.clerkId, mockUser.clerkId)).limit(1);
     if (u) {

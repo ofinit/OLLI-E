@@ -3,7 +3,7 @@ import { mockNiches } from '@/lib/mock-data';
 import { OpenAIStream, StreamingTextResponse } from 'ai';
 // import { auth } from '@clerk/nextjs/server';
 import { db } from '@/db';
-import { users, wallets, aiModels, usageLogs } from '@/db/schema';
+import { users, wallets, aiModels, usageLogs, platformSettings } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 // Initialize OpenRouter provider
@@ -14,15 +14,20 @@ const openrouter = createOpenAI({
 
 export async function POST(req: Request) {
   try {
-    // Mock userId for local bypass
-    const userId = "user_2p5X7z9W1V3U4t5S"; 
-    // const { userId } = await auth();
-    /*
-    if (!userId) {
-      return new Response('Unauthorized: Please sign in.', { status: 401 });
+    // 0. Resolve the API Key from Env OR Database
+    let apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey && process.env.DATABASE_URL) {
+      const [settings] = await db.select({ key: platformSettings.openRouterApiKey }).from(platformSettings).limit(1);
+      if (settings?.key) apiKey = settings.key;
     }
-    */
 
+    // Initialize OpenRouter provider dynamically
+    const openrouter = createOpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: apiKey || '',
+    });
+
+    const userId = "user_2p5X7z9W1V3U4t5S"; 
     const { messages, nicheId, generateImages } = await req.json();
 
     if (generateImages) {
@@ -96,7 +101,7 @@ export async function POST(req: Request) {
           controller.enqueue(encoder.encode(`*✍️ **[Synthesizer Agent]** Compiling final response...*\n\n---\n\n`));
 
           try {
-            if (!process.env.OPENROUTER_API_KEY) {
+            if (!apiKey) {
               // Full mock stream bypass if there is no API key configured.
               const mockResponse = `To architect a highly scalable cloud system, we implement a decoupled microservices architecture utilizing container orchestration (like Kubernetes) mapped across multi-region availability zones to ensure 99.99% uptime and auto-scaling elasticity. Strategic caching layers via Redis alongside read-replicas for our persistent database tier prevents bottlenecks, allowing infrastructure to dynamically respond to 100x traffic surges seamlessly.`;
               const words = mockResponse.split(" ");
@@ -116,7 +121,7 @@ export async function POST(req: Request) {
             const swarmResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
@@ -195,7 +200,7 @@ export async function POST(req: Request) {
     }
 
 
-    if (!process.env.OPENROUTER_API_KEY) {
+    if (!apiKey) {
       const stream = new ReadableStream({
         async start(controller) {
           const encoder = new TextEncoder();
@@ -214,7 +219,7 @@ export async function POST(req: Request) {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
