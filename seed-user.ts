@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "./src/db/schema";
+import { eq } from "drizzle-orm";
 import * as dotenv from "dotenv";
 import { mockUser } from "./src/lib/mock-data";
 
@@ -10,8 +11,8 @@ const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle(sql, { schema });
 
 async function seedUser() {
-  console.log("Checking for mock user in DB...");
-  const existingUsers = await db.select().from(schema.users).where(schema.users.clerkId.equals(mockUser.clerkId));
+  console.log("Checking for mock user...");
+  const existingUsers = await db.select().from(schema.users).where(eq(schema.users.clerkId, mockUser.clerkId));
 
   let userId;
   if (existingUsers.length === 0) {
@@ -27,7 +28,7 @@ async function seedUser() {
     console.log("Found existing user:", userId);
   }
 
-  const existingWallets = await db.select().from(schema.wallets).where(schema.wallets.userId.equals(userId));
+  const existingWallets = await db.select().from(schema.wallets).where(eq(schema.wallets.userId, userId));
 
   if (existingWallets.length === 0) {
     console.log("Wallet not found. Creating and funding wallet...");
@@ -38,7 +39,7 @@ async function seedUser() {
     console.log("Injected $100.00 into new wallet.");
   } else {
     console.log("Wallet exists. Topping up to $100.00...");
-    await db.update(schema.wallets).set({ balance: "100.00" }).where(schema.wallets.userId.equals(userId));
+    await db.update(schema.wallets).set({ balance: "100.00" }).where(eq(schema.wallets.userId, userId));
     console.log("Wallet topped up to $100.00.");
   }
 
