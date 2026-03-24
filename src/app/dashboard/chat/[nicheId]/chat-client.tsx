@@ -476,10 +476,20 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
     }
   });
 
-  // Auto-scroll to bottom whenever messages change
+  // Stable scroll: only auto-scroll if user is already near the bottom (within 120px).
+  // Uses instant scroll (no smooth) during streaming to prevent the shake.
+  const prevMessageCountRef = useRef(0);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNewMessage = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    // Always scroll for a brand-new message; scroll during streaming only if near bottom
+    if (isNewMessage || distanceFromBottom < 120) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages]);
 
   // Handle ?q= query param
   useEffect(() => {
