@@ -93,6 +93,9 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
   const { messages, input, handleInputChange, isLoading, setInput, append } = useChat({
     api: "/api/chat",
     body: { nicheId: niche.id, generateImages }, // send true DB ID
+    onError: (e) => {
+      alert(`Chat Error: ${e.message}`);
+    }
   });
 
   useEffect(() => {
