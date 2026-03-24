@@ -16,7 +16,7 @@ const fadeUp = {
     y: 0,
     transition: { duration: 0.6, ease: "easeOut" }
   }
-};
+} as any;
 
 const staggerContainer = {
   hidden: { opacity: 0 },
