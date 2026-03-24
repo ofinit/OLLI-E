@@ -61,13 +61,13 @@ const IconMap: Record<string, any> = {
   Terminal, Palette, Cpu
 };
 
-export function ChatClient({ nicheId, niche }: { nicheId: string, niche: any }) {
+export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBalance }: { nicheId: string, niche: any, isS3Configured: boolean, walletBalance: string }) {
   // Use DB id for unique lookup, fallback to generic Box if icon undefined
   const NicheIcon = IconMap[niche.icon as string] || Box;
 
   const [isListening, setIsListening] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<{ name: string, type: string, content?: string }[]>([]);
-  const [isS3Configured, setIsS3Configured] = useState(mockUser.isS3Configured);
+  const [isS3Configured, setIsS3Configured] = useState(initialS3);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showS3Modal, setShowS3Modal] = useState(false);
   const [showIntegrations, setShowIntegrations] = useState(false);
@@ -203,6 +203,12 @@ export function ChatClient({ nicheId, niche }: { nicheId: string, niche: any }) 
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Live DB Wallet Tracker */}
+          <Link href="/dashboard/wallet" className="flex items-center gap-2 text-sm font-medium text-zinc-600 bg-zinc-50 px-4 py-2 hover:bg-zinc-100 rounded-lg border border-zinc-100 mr-2 transition-all">
+            <Coins className="h-4 w-4 text-blue-500" />
+            <span className="font-bold text-black">${Number(walletBalance).toFixed(2)}</span>
+          </Link>
+
           {/* Connectivity Hub Shortcut */}
           <Button 
             variant="ghost" 

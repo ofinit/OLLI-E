@@ -22,10 +22,10 @@ const IconMap: Record<string, any> = {
   Terminal, Palette, Cpu, Globe, Image: ImageIcon, MessageSquare, BookOpen, Command, Plug, FolderOpen, Box
 };
 
-export function HomeClient({ niches }: { niches: { id: string, name: string, icon: string }[] }) {
+export function HomeClient({ niches, isS3Configured: initialS3 }: { niches: { id: string, name: string, icon: string }[], isS3Configured: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{ name: string, type: string }[]>([]);
-  const [isS3Configured, setIsS3Configured] = useState(mockUser.isS3Configured);
+  const [isS3Configured, setIsS3Configured] = useState(initialS3);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showS3Modal, setShowS3Modal] = useState(false);
   const [showPowerMenu, setShowPowerMenu] = useState(false);

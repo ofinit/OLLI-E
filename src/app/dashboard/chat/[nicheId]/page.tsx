@@ -1,9 +1,9 @@
 import { db } from "@/db";
-import { aiModels } from "@/db/schema";
+import { aiModels, users, userS3Configs, wallets } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { ChatClient } from "./chat-client";
 import { redirect } from "next/navigation";
-import { mockNiches } from "@/lib/mock-data";
+import { mockNiches, mockUser } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
 
@@ -52,5 +52,20 @@ export default async function ChatPage({ params }: { params: Promise<{ nicheId: 
     };
   }
 
-  return <ChatClient nicheId={nicheId} niche={niche} />;
+  let isS3Configured = false;
+  let walletBalance = "0.00";
+  try {
+    const [u] = await db.select().from(users).where(eq(users.clerkId, mockUser.clerkId)).limit(1);
+    if (u) {
+      const [s3] = await db.select().from(userS3Configs).where(eq(userS3Configs.userId, u.id)).limit(1);
+      if (s3) isS3Configured = true;
+
+      const [w] = await db.select().from(wallets).where(eq(wallets.userId, u.id)).limit(1);
+      if (w) walletBalance = w.balance.toString();
+    }
+  } catch(e) {
+    console.error(e);
+  }
+
+  return <ChatClient nicheId={nicheId} niche={niche} isS3Configured={isS3Configured} walletBalance={walletBalance} />;
 }
