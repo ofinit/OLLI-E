@@ -260,8 +260,8 @@ export async function POST(req: Request) {
     });
 
     return new StreamingTextResponse(stream);
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Gateway Error:", error);
-    return new Response('AI Gateway Error', { status: 500 });
+    return new Response(`AI Gateway Error: ${error.message || 'Unknown Error'}`, { status: 500 });
   }
 }
