@@ -43,3 +43,19 @@ export const userS3Configs = pgTable('user_s3_configs', {
   bucketName: text('bucket_name').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const platformSettings = pgTable('platform_settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  platformName: text('platform_name').default('OLLI-E AI').notNull(),
+  supportEmail: text('support_email').default('support@olli-e.ai').notNull(),
+  openRouterApiKey: text('openrouter_api_key'),
+  neonDbUrl: text('neon_db_url'),
+  upstashRedisUrl: text('upstash_redis_url'),
+  clerkPublishableKey: text('clerk_publishable_key'),
+  clerkSecretKey: text('clerk_secret_key'),
+  razorpayKeyId: text('razorpay_key_id'),
+  paypalClientId: text('paypal_client_id'),
+  zwitchApiKey: text('zwitch_api_key'),
+  instamojoAuthToken: text('instamojo_auth_token'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
