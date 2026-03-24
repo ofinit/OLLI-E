@@ -9,7 +9,7 @@ export default async function DashboardPage() {
   let niches = [];
   try {
     const modelsData = await db
-      .select({ id: aiModels.id, name: aiModels.nicheName })
+      .select({ id: aiModels.id, name: aiModels.nicheName, icon: aiModels.icon })
       .from(aiModels)
       .where(eq(aiModels.isActive, true));
     niches = modelsData;

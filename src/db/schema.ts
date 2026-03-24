@@ -19,6 +19,7 @@ export const aiModels = pgTable('ai_models', {
   nicheName: text('niche_name').notNull(), // e.g. "Website Builder"
   providerModelId: text('provider_model_id').notNull(), // e.g. "moonshot-v1-auto"
   systemPrompt: text('system_prompt').notNull(), // The strict OLLI-E identity rule
+  icon: text('icon').default('Box').notNull(), // Lucide React icon name
   baseCostPer1k: decimal('base_cost_per_1k', { precision: 12, scale: 6 }).notNull(),
   profitMarginPercent: integer('profit_margin_percent').default(50).notNull(),
   isActive: boolean('is_active').default(true).notNull(),

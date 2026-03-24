@@ -6,7 +6,8 @@ import {
   ChevronRight, Paperclip, X, Plus, Github, 
   Layers, Image as ImageIcon, BookOpen, Command, 
   Plug, ChevronLeft, MessageSquare, Palette, FolderOpen,
-  BrainCircuit
+  BrainCircuit, Layout, PenTool, Scale, Share2, Mail, Youtube, 
+  BarChart, UserCircle, Sparkles, Languages, Cpu, Box
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,7 +16,13 @@ import { mockUser } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-export function HomeClient({ niches }: { niches: { id: string, name: string }[] }) {
+const IconMap: Record<string, any> = {
+  Layout, PenTool, Scale, Share2, Mail, Youtube, BarChart, 
+  Search, UserCircle, Sparkles, Languages, Layers, Zap, 
+  Terminal, Palette, Cpu, Globe, Image: ImageIcon, MessageSquare, BookOpen, Command, Plug, FolderOpen, Box
+};
+
+export function HomeClient({ niches }: { niches: { id: string, name: string, icon: string }[] }) {
   const [prompt, setPrompt] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<{ name: string, type: string }[]>([]);
   const [isS3Configured, setIsS3Configured] = useState(mockUser.isS3Configured);
@@ -257,17 +264,25 @@ export function HomeClient({ niches }: { niches: { id: string, name: string }[] 
         />
 
         {/* Niche Chips */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-          {niches.map((niche) => (
-            <Link
-              key={niche.id}
-              href={`/dashboard/chat/${niche.id}`}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-full text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300 transition-all"
-            >
-              <BrainCircuit className="h-4 w-4 text-zinc-400" />
-              {niche.name}
-            </Link>
-          ))}
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-lg mx-auto">
+          {niches.map((niche) => {
+            const RenderedIcon = IconMap[niche.icon] || Box;
+            return (
+              <Link
+                key={niche.id}
+                href={`/dashboard/chat/${niche.id}`}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 rounded-full text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm hover:shadow"
+              >
+                <RenderedIcon className="h-4 w-4 text-zinc-500" />
+                {niche.name}
+              </Link>
+            );
+          })}
+          
+          <Link href="/dashboard/chat/agent-swarm" className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 text-white rounded-full text-sm font-bold hover:bg-black transition-all shadow-md hover:shadow-lg">
+            <Cpu className="h-4 w-4 text-zinc-300" />
+            Agent Swarm
+          </Link>
         </div>
       </div>
     </div>
