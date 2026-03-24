@@ -418,7 +418,7 @@ function QuestionForm({ questions, onSubmit }: { questions: Question[]; onSubmit
               value={answers[q.num] || ''}
               onChange={e => setAnswers(a => ({ ...a, [q.num]: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter' && canSubmit) { e.preventDefault(); handleSubmit(); } }}
-              className="ml-7 w-full border border-zinc-200 rounded-xl px-4 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 placeholder:text-zinc-300 bg-white transition-all"
+              className="ml-7 w-[calc(100%-1.75rem)] border border-zinc-200 rounded-xl px-4 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 placeholder:text-zinc-300 bg-white transition-all"
             />
           )}
         </div>
@@ -669,8 +669,8 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
                 <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${m.role === "assistant" ? "bg-black text-white" : "bg-zinc-100 text-zinc-600"}`}>
                   {m.role === "assistant" ? "K" : "U"}
                 </div>
-                <div className="flex flex-col gap-2 max-w-[85%]">
-                  <div className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed break-words ${
+                <div className="flex flex-col gap-2 max-w-[85%] min-w-0">
+                  <div className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed break-words overflow-hidden ${
                     m.role === "user"
                       ? "bg-zinc-900 text-white"
                       : "bg-white border border-zinc-100 text-zinc-800 shadow-sm"
