@@ -1,14 +1,20 @@
 import { db } from "@/db";
-import { aiModels, users, userS3Configs, wallets } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { aiModels, users, userS3Configs, wallets, chatMessages } from "@/db/schema";
+import { eq, asc } from "drizzle-orm";
 import { ChatClient } from "./chat-client";
 import { redirect } from "next/navigation";
 import { mockNiches, mockUser } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChatPage({ params }: { params: Promise<{ nicheId: string }> }) {
+interface PageProps {
+  params: Promise<{ nicheId: string }>;
+  searchParams: Promise<{ session?: string }>;
+}
+
+export default async function ChatPage({ params, searchParams }: PageProps) {
   const { nicheId } = await params;
+  const { session: sessionId } = await searchParams;
   
   let niche;
 
@@ -54,6 +60,8 @@ export default async function ChatPage({ params }: { params: Promise<{ nicheId: 
 
   let isS3Configured = false;
   let walletBalance = "0.00";
+  let initialMessages: any[] = [];
+
   try {
     const [u] = await db.select().from(users).where(eq(users.clerkId, mockUser.clerkId)).limit(1);
     if (u) {
@@ -62,10 +70,34 @@ export default async function ChatPage({ params }: { params: Promise<{ nicheId: 
 
       const [w] = await db.select().from(wallets).where(eq(wallets.userId, u.id)).limit(1);
       if (w) walletBalance = w.balance.toString();
+
+      // Fetch history if sessionId is provided
+      if (sessionId) {
+        const history = await db
+          .select()
+          .from(chatMessages)
+          .where(eq(chatMessages.sessionId, sessionId))
+          .orderBy(asc(chatMessages.createdAt));
+        
+        initialMessages = history.map((m: any) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content
+        }));
+      }
     }
   } catch(e) {
     console.error(e);
   }
 
-  return <ChatClient nicheId={nicheId} niche={niche} isS3Configured={isS3Configured} walletBalance={walletBalance} />;
+  return (
+    <ChatClient 
+      nicheId={nicheId} 
+      niche={niche} 
+      isS3Configured={isS3Configured} 
+      walletBalance={walletBalance} 
+      initialMessages={initialMessages}
+      initialSessionId={sessionId}
+    />
+  );
 }

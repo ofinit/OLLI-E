@@ -65,20 +65,42 @@ export function S3ConfigModal({ isOpen, onOpenChange, onSuccess }: S3ModalProps)
   const [success, setSuccess] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState("aws");
 
+  const [bucketName, setBucketName] = useState("");
+  const [accessKeyId, setAccessKeyId] = useState("");
+  const [secretAccessKey, setSecretAccessKey] = useState("");
+  const [region, setRegion] = useState(""); // Endpoint / Region
+
   const provider = PROVIDERS.find(p => p.id === selectedProvider) || PROVIDERS[0];
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await fetch('/api/s3-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bucketName,
+          accessKeyId,
+          secretAccessKey,
+          region,
+          provider: selectedProvider
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to save config');
+
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
         onOpenChange(false);
         onSuccess();
       }, 1500);
-    }, 1000);
+    } catch (err) {
+      alert("Error saving S3 configuration. Please check your keys.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -137,6 +159,8 @@ export function S3ConfigModal({ isOpen, onOpenChange, onSuccess }: S3ModalProps)
               </div>
               <Input 
                 required 
+                value={bucketName}
+                onChange={(e) => setBucketName(e.target.value)}
                 placeholder="e.g. my-private-files" 
                 className="h-14 bg-zinc-50/50 border-zinc-100 rounded-2xl focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-medium text-lg px-6"
               />
@@ -162,6 +186,8 @@ export function S3ConfigModal({ isOpen, onOpenChange, onSuccess }: S3ModalProps)
                 <label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Endpoint URL</label>
                 <Input 
                   required 
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
                   placeholder={`e.g. ${selectedProvider}.s3.amazonaws.com or custom ip`} 
                   className="h-14 bg-zinc-50/50 border-zinc-100 rounded-2xl focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-mono px-6"
                 />
@@ -176,7 +202,9 @@ export function S3ConfigModal({ isOpen, onOpenChange, onSuccess }: S3ModalProps)
                 <Input 
                   required 
                   type="password"
-                  placeholder="Paste Key ID" 
+                  value={accessKeyId}
+                  onChange={(e) => setAccessKeyId(e.target.value)}
+                  placeholder="Paste Access Key" 
                   className="h-14 bg-zinc-50/50 border-zinc-100 rounded-2xl focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-mono px-6"
                 />
               </div>
@@ -187,6 +215,8 @@ export function S3ConfigModal({ isOpen, onOpenChange, onSuccess }: S3ModalProps)
                 <Input 
                   required 
                   type="password"
+                  value={secretAccessKey}
+                  onChange={(e) => setSecretAccessKey(e.target.value)}
                   placeholder="Paste Secret Key" 
                   className="h-14 bg-zinc-50/50 border-zinc-100 rounded-2xl focus:ring-4 focus:ring-black/5 focus:border-black transition-all font-mono px-6"
                 />

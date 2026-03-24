@@ -440,16 +440,26 @@ function QuestionForm({ questions, onSubmit }: { questions: Question[]; onSubmit
 }
 
 // ─── Main Chat Client ──────────────────────────────────────────────────────
-export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBalance }: {
-  nicheId: string;
-  niche: any;
-  isS3Configured: boolean;
+export function ChatClient({ 
+  nicheId, 
+  niche, 
+  isS3Configured: initialS3, 
+  walletBalance,
+  initialMessages = [],
+  initialSessionId = null
+}: { 
+  nicheId: string; 
+  niche: any; 
+  isS3Configured: boolean; 
   walletBalance: string;
+  initialMessages?: any[];
+  initialSessionId?: string | null;
 }) {
   const NicheIcon = IconMap[niche.icon as string] || Box;
 
   const [isListening, setIsListening] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<{ name: string; type: string; content?: string }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<{ name: string; type: string; url?: string; content?: string }[]>([]);
   const [isS3Configured, setIsS3Configured] = useState(initialS3);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showS3Modal, setShowS3Modal] = useState(false);
@@ -468,10 +478,11 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
     fileInputRef.current?.click();
   };
 
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(initialSessionId || null);
 
   const { messages, input, handleInputChange, isLoading, setInput, append } = useChat({
     api: "/api/chat",
+    initialMessages,
     body: { nicheId: niche.id, generateImages, sessionId },
     onResponse: (res) => {
       const sid = res.headers.get('X-Session-Id');
@@ -839,13 +850,47 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
               onChange={async (e) => {
                 if (e.target.files) {
                   const filesArray = Array.from(e.target.files);
+                  setIsUploading(true);
+                  
                   const newFiles = await Promise.all(
                     filesArray.map(async (f) => {
-                      try { return { name: f.name, type: f.type, content: (await f.text()).slice(0, 15000) }; }
-                      catch { return { name: f.name, type: f.type, content: "[Format unsupported]" }; }
+                      try {
+                        // 1. Get Presigned URL
+                        const presignRes = await fetch('/api/s3-presign', {
+                          method: 'POST',
+                          body: JSON.stringify({ filename: f.name, contentType: f.type })
+                        });
+                        const { signedUrl, key } = await presignRes.json();
+                        
+                        if (!signedUrl) throw new Error("No signed URL");
+
+                        // 2. Upload to S3
+                        await fetch(signedUrl, {
+                          method: 'PUT',
+                          body: f,
+                          headers: { 'Content-Type': f.type }
+                        });
+
+                        const s3Url = signedUrl.split('?')[0];
+
+                        return { 
+                          name: f.name, 
+                          type: f.type, 
+                          url: s3Url,
+                          content: `[File uploaded to S3: ${s3Url}]` 
+                        };
+                      } catch (err) {
+                        console.error("Upload failed for", f.name, err);
+                        // Fallback to text if small, or error
+                        if (f.size < 50000) {
+                           return { name: f.name, type: f.type, content: (await f.text()).slice(0, 15000) };
+                        }
+                        return { name: f.name, type: f.type, content: "[Upload failed]" };
+                      }
                     })
                   );
                   setAttachedFiles(prev => [...prev, ...newFiles]);
+                  setIsUploading(false);
                 }
               }}
             />
@@ -919,10 +964,15 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
               </Button>
               <Button
                 type="submit" size="icon"
-                disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
-                className="h-10 w-10 rounded-2xl bg-zinc-900 hover:bg-black disabled:opacity-20 transition-all shadow-md"
+                disabled={isLoading || isUploading || (!input.trim() && attachedFiles.length === 0)}
+                className="h-10 px-4 rounded-2xl bg-zinc-900 hover:bg-black disabled:opacity-20 transition-all shadow-md flex items-center gap-2"
               >
-                <Send className="h-5 w-5 text-white" />
+                {isUploading ? (
+                  <Zap className="h-4 w-4 text-amber-500 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5 text-white" />
+                )}
+                {isUploading && <span className="text-[10px] font-black uppercase text-white">Uploading...</span>}
               </Button>
             </div>
           </div>

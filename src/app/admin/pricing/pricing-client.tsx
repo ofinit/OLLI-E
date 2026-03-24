@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Percent, TrendingUp, Gift, Building2, Zap, Save, Trash } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { savePricingSettings, addDepositBonus, removeDepositBonus } from "./actions";
 
 const fadeUp = {
@@ -76,6 +76,25 @@ export function PricingClient({ initialSettings, initialBonuses }: { initialSett
     });
   };
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleSyncPrices = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/admin/sync-prices", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message || "Prices synced successfully!");
+        window.location.reload();
+      } else {
+        alert("Failed to sync prices: " + data.error);
+      }
+    } catch (err) {
+      alert("Error syncing prices.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-8">
       <motion.div variants={fadeUp} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -83,9 +102,20 @@ export function PricingClient({ initialSettings, initialBonuses }: { initialSett
           <h1 className="text-4xl font-black tracking-tighter text-black">Pricing & Margins</h1>
           <p className="text-zinc-500 mt-2 text-lg font-medium">Control global pricing architecture, wholesale discounts, and deposit bonuses.</p>
         </div>
-        <Button onClick={handleSave} disabled={isPending} className="bg-black hover:bg-zinc-800 text-white rounded-xl shadow-lg shadow-black/10 px-8 h-10 font-bold transition-all gap-2">
-          <Save className="w-4 h-4" /> {isPending ? "Saving..." : "Save Pricing Rules"}
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleSyncPrices} 
+            disabled={isSyncing} 
+            variant="outline"
+            className="border-2 border-zinc-200 hover:bg-zinc-50 text-zinc-600 rounded-xl px-6 h-10 font-bold transition-all gap-2"
+          >
+            <Zap className={`w-4 h-4 text-amber-500 ${isSyncing ? "animate-spin" : ""}`} />
+            {isSyncing ? "Syncing..." : "Sync Live Prices"}
+          </Button>
+          <Button onClick={handleSave} disabled={isPending} className="bg-black hover:bg-zinc-800 text-white rounded-xl shadow-lg shadow-black/10 px-8 h-10 font-bold transition-all gap-2">
+            <Save className="w-4 h-4" /> {isPending ? "Saving..." : "Save Pricing Rules"}
+          </Button>
+        </div>
       </motion.div>
 
       {/* Metrics Row */}
