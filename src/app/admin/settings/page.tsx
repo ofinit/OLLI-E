@@ -96,7 +96,12 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="space-y-1.5">
-                <Label className="font-bold text-zinc-600">OpenRouter API Key</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold text-zinc-600">OpenRouter API Key</Label>
+                  <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-[10px] uppercase font-black tracking-widest text-emerald-600 hover:text-emerald-700 hover:underline transition-all">
+                    Get keys ↗
+                  </a>
+                </div>
                 <div className="relative">
                   <Input type="password" defaultValue="sk-or-v1-fb613a9..." className="bg-zinc-50 border-zinc-200 rounded-xl pr-10" />
                   <Key className="absolute right-3 top-2.5 h-4 w-4 text-zinc-400" />
