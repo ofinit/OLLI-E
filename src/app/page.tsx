@@ -14,7 +14,7 @@ const fadeUp = {
   visible: { 
     opacity: 1, 
     y: 0,
-    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as any }
   }
 };
 
@@ -104,7 +104,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 100, rotateX: 15 }}
             whileInView={{ opacity: 1, y: 0, rotateX: 15 }}
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as any, delay: 0.4 }}
             className="mt-24 w-full max-w-5xl mx-auto relative perspective-[2000px] group"
           >
             <div className="absolute inset-0 bg-gradient-to-t from-[#fbfbfd] via-transparent to-transparent z-20" />
