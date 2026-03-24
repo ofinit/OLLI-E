@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates an S3 bucket and an IAM user with programmatic access exclusively for that bucket.'
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name for the new S3 bucket (must be globally unique)
+Resources:
+  OllieBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE', 'HEAD']
+            AllowedOrigins: ['*']
+  OllieIAMUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub 'Ollie-S3-User-${AWS::StackName}'
+  OllieAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref OllieIAMUser
+  OllieUserPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: S3ExclusiveAccess
+      Users:
+        - !Ref OllieIAMUser
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:DeleteObject'
+            Resource: !Sub 'arn:aws:s3:::${OllieBucket}/*'
+Outputs:
+  BucketName:
+    Value: !Ref OllieBucket
+  AccessKeyId:
+    Value: !Ref OllieAccessKey
+  SecretAccessKey:
+    Value: !GetAtt OllieAccessKey.SecretAccessKey
