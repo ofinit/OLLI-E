@@ -1,0 +1,57 @@
+﻿
+> tempapp@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.2.0 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 4.6s
+  Running TypeScript ...
+node.exe : Failed to type check.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to type check.:String) [] 
+   , RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/app/admin/page.tsx:39:19
+Type error: Type '{ hidden: { opacity: number; y: number; }; visible: { 
+opacity: number; y: number; transition: { duration: number; ease: number[]; 
+}; }; }' is not assignable to type 'Variants'.
+  Property 'visible' is incompatible with index signature.
+    Type '{ opacity: number; y: number; transition: { duration: number; ease: 
+number[]; }; }' is not assignable to type 'Variant'.
+      Type '{ opacity: number; y: number; transition: { duration: number; 
+ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
+        Type '{ opacity: number; y: number; transition: { duration: number; 
+ease: number[]; }; }' is not assignable to type '{ transition?: 
+Transition<any> | undefined; transitionEnd?: ResolvedValues$1 | undefined; }'.
+          Types of property 'transition' are incompatible.
+            Type '{ duration: number; ease: number[]; }' is not assignable to 
+type 'Transition<any> | undefined'.
+              Type '{ duration: number; ease: number[]; }' is not assignable 
+to type 'TransitionWithValueOverrides<any>'.
+                Type '{ duration: number; ease: number[]; }' is not 
+assignable to type 'ValueAnimationTransition<any>'.
+                  Types of property 'ease' are incompatible.
+                    Type 'number[]' is not assignable to type 'Easing | 
+Easing[] | undefined'.
+                      Type 'number[]' is not assignable to type 
+'EasingFunction | Easing[]'.
+                        Type 'number[]' is not assignable to type 'Easing[]'.
+                          Type 'number' is not assignable to type 'Easing'.
+
+  [90m37 |[0m       className=[32m"space-y-8"[0m
+  [90m38 |[0m     >
+[31m[1m>[0m [90m39 |[0m       <motion.div variants={fadeUp}>
+  [90m   |[0m                   [31m[1m^[0m
+  [90m40 |[0m         <h1 className=[32m"text-4xl font-black 
+tracking-tighter text-black"[0m>[33mDashboard[0m</h1>
+  [90m41 |[0m         <p className=[32m"text-zinc-500 mt-2 text-lg 
+font-medium"[0m>[33mReal[0m-time overview [36mof[0m 
+[33mOLLI[0m-[33mE[0m...
+  [90m42 |[0m       </motion.div>
+Next.js build worker exited with code: 1 and signal: null
