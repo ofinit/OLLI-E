@@ -28,31 +28,91 @@ import { Badge } from "@/components/ui/badge";
 
 const PREDEFINED_PROMPTS: Record<string, string[]> = {
   "deep-research": [
-    "Compile a comprehensive report on solid-state batteries.",
-    "Analyze macro-economic trends in the 2026 real estate market.",
-    "Find recent academic papers discussing AGI alignment strategies."
+    "I need to research a topic but don't know where to start. Can you walk me through how you'd approach finding reliable information on [my topic]?",
+    "What are the most important things to know about solid-state batteries in 2025?",
+    "Find and summarize recent trends in the Indian startup ecosystem."
   ],
   "agent-swarm": [
-    "Deploy the swarm to build a Next.js app with auth.",
-    "Formulate a multi-channel digital marketing strategy.",
-    "Analyze a codebase and automatically draft unit tests."
+    "I have a big project but I'm overwhelmed. Can you break it down into manageable steps for me?",
+    "Deploy a team of agents to research, plan, and draft a complete digital marketing strategy for a new product.",
+    "Analyze my business idea and produce a complete SWOT analysis, market sizing, and first steps."
   ],
   "code-generator": [
-    "Write a responsive React navbar using TailwindCSS.",
-    "Review my Python script for security vulnerabilities.",
-    "Explain the internal mechanics of React Server Components."
+    "I'm new to coding. Can you teach me step by step how to build a simple website?",
+    "Write a complete responsive landing page with HTML, CSS and a contact form.",
+    "Review this code and explain any bugs or improvements in simple language."
   ],
   "website-builder": [
-    "Generate a high-converting landing page for an AI SaaS.",
-    "Create a minimal portfolio template with HTML & CSS.",
-    "Design a hero section with glassmorphism and animations."
+    "I want a website but I'm not technical. Ask me questions to understand what I need, then help me build it.",
+    "Create a high-converting SaaS landing page with a hero section, features, pricing, and footer.",
+    "Generate a portfolio website for a freelance photographer."
+  ],
+  "data-analyst": [
+    "I have a spreadsheet of sales data. Walk me through how to find the most important insights.",
+    "Explain what data analytics means and how I can use it for my small business.",
+    "I'll paste some numbers — can you help me understand what story they tell?"
+  ],
+  "seo-optimizer": [
+    "My website gets no traffic. Ask me about my business and help me fix my SEO step by step.",
+    "Write SEO-optimized meta titles and descriptions for my website about [topic].",
+    "What are the top 10 keywords I should target for a bakery in Mumbai?"
+  ],
+  "content-writer": [
+    "I need a blog post but don't know how to write. Ask me questions and write it for me.",
+    "Write a 1000-word article about the benefits of meditation for beginners.",
+    "Create 5 catchy headlines for a fitness brand's Instagram campaign."
+  ],
+  "image-crafter": [
+    "I want an image for my business. Describe what I should ask for and then generate it.",
+    "Generate a professional banner for a tech startup called 'NexaAI' in dark blue tones.",
+    "Create a vibrant social media post image for a summer sale promotion."
+  ],
+  "storyteller": [
+    "I have a story idea but I don't know how to develop it. Ask me about it and help me build it.",
+    "Write the opening chapter of a thriller set in a futuristic Mumbai.",
+    "Create a short children's story about a curious robot who learns about friendship."
+  ],
+  "youtube-scripts": [
+    "I want to start a YouTube channel. Ask me about my niche and help me plan my first 5 videos.",
+    "Write a script for a 10-minute video about 'How to make money with AI in 2025'.",
+    "Create a viral-style hook and intro for a tech review video."
+  ],
+  "product-manager": [
+    "I have a product idea. Walk me through the steps to turn it into a real product, from zero.",
+    "Write a complete PRD (Product Requirements Document) for a mobile app that tracks daily habits.",
+    "Help me define user stories and acceptance criteria for a SaaS onboarding flow."
+  ],
+  "social-media": [
+    "I want to grow on social media but I don't know where to start. Ask me about my business and make a plan.",
+    "Create a 30-day social media content calendar for a fitness coach on Instagram.",
+    "Write 5 LinkedIn posts that establish thought leadership for a B2B SaaS founder."
+  ],
+  "email-architect": [
+    "I want to do email outreach but I've never done it before. Guide me step by step.",
+    "Write a 5-email cold outreach sequence for selling a digital marketing service to small businesses.",
+    "Create a newsletter welcome email for a health and wellness brand."
+  ],
+  "resume-pro": [
+    "I want to update my resume. Ask me about my experience and help me write a professional one.",
+    "Rewrite this bullet point to make it sound more impressive: 'Managed a team of 5'",
+    "Write a cover letter for a software engineer applying to a startup."
+  ],
+  "legal-companion": [
+    "I received a contract and I'm confused. Walk me through how to read and understand it.",
+    "Explain what an NDA (Non-Disclosure Agreement) is in simple terms and what I should watch out for.",
+    "What are the key clauses to look for in a freelance service agreement?"
+  ],
+  "language-tutor": [
+    "I want to learn a new language but don't know how to start. Ask me which language and my level, then teach me.",
+    "Teach me the 50 most common phrases in Spanish for a beginner traveling to Spain.",
+    "Correct my grammar in this text and explain each mistake in simple terms."
   ],
 };
 
 const DEFAULT_PROMPTS = [
-  "Explain a complex topic in simple terms.",
+  "I'm new here. Can you ask me what I need and guide me step by step?",
   "Help me brainstorm ideas for my next project.",
-  "Draft a professional email to my team."
+  "Ask me questions to understand my goal, then create an action plan."
 ];
 
 const IconMap: Record<string, any> = {
@@ -92,7 +152,7 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
 
   const { messages, input, handleInputChange, isLoading, setInput, append } = useChat({
     api: "/api/chat",
-    body: { nicheId: niche.id, generateImages }, // send true DB ID
+    body: { nicheId: niche.id, generateImages },
     onError: (e) => {
       alert(`Chat Error: ${e.message}`);
     }
