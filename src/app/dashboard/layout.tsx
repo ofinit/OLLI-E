@@ -14,7 +14,7 @@ export default async function DashboardLayout({
     { id: "code", name: "Dev Projects", count: 12 },
   ];
 
-  if (isPlaceholderDB) {
+   if (isPlaceholderDB) {
     const { mockNiches } = await import("@/lib/mock-data");
     niches = mockNiches.map(n => ({ id: n.id, name: n.nicheName, icon: n.icon }));
   } else {
@@ -22,14 +22,23 @@ export default async function DashboardLayout({
       const { db } = await import("@/db");
       const { aiModels } = await import("@/db/schema");
       const { eq } = await import("drizzle-orm");
-      niches = await db
+      
+      const rawNiches = await db
         .select({
           id: aiModels.id,
           name: aiModels.nicheName,
-          icon: aiModels.id,
+          icon: aiModels.icon,
         })
         .from(aiModels)
         .where(eq(aiModels.isActive, true));
+
+      const POPULAR_NICHES = [
+        "Deep Research", "Expert Developer", "Website Builder", 
+        "Content Writer", "Image Crafter", "Data Analyst", 
+        "YouTube Scriptwriter", "SEO Optimizer"
+      ];
+
+      niches = rawNiches.filter((m: any) => POPULAR_NICHES.includes(m.name) && m.icon !== 'Box').slice(0, 8);
     } catch (e) {
       const { mockNiches } = await import("@/lib/mock-data");
       niches = mockNiches.map(n => ({ id: n.id, name: n.nicheName, icon: n.icon }));
