@@ -1,6 +1,6 @@
 import { mockNiches } from '@/lib/mock-data';
 import { db } from '@/db';
-import { users, wallets, aiModels, usageLogs, platformSettings } from '@/db/schema';
+import { users, wallets, aiModels, usageLogs, platformSettings, chatSessions, chatMessages } from '@/db/schema';
 import { eq, sql } from 'drizzle-orm';
 
 async function resolveApiKey(): Promise<string | null> {
@@ -14,7 +14,6 @@ async function resolveApiKey(): Promise<string | null> {
   return apiKey;
 }
 
-// Returns a ReadableStream in the ai/react v2 text format (plain text)
 function makePlainTextStream(text: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream({
@@ -28,11 +27,16 @@ function makePlainTextStream(text: string): ReadableStream<Uint8Array> {
   });
 }
 
+// Derive a short title from the first user message
+function deriveTitle(firstUserMessage: string): string {
+  return firstUserMessage.replace(/\s+/g, ' ').trim().slice(0, 60) || 'New Chat';
+}
+
 export async function POST(req: Request) {
   try {
     const apiKey = await resolveApiKey();
     const userId = "user_2p5X7z9W1V3U4t5S";
-    const { messages, nicheId, generateImages } = await req.json();
+    const { messages, nicheId, generateImages, sessionId: existingSessionId } = await req.json();
 
     // --- IMAGE GENERATION MODE ---
     if (generateImages) {
@@ -47,7 +51,6 @@ export async function POST(req: Request) {
     let agent: any;
     let userRecord: any = { id: "mock_user", clerkId: userId };
 
-    // DB Bypass if unconfigured locally
     if (!process.env.DATABASE_URL) {
       agent = mockNiches.find((n: any) => n.id === nicheId);
       if (!agent) return new Response('Agent not found.', { status: 404 });
@@ -66,7 +69,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // No API key — return helpful guidance
     if (!apiKey) {
       return new Response(
         makePlainTextStream(`Hello! I'm **${agent.nicheName}**, your specialized OLLI-E assistant.\n\n⚠️ The OpenRouter API key hasn't been configured yet. Please ask your admin to add it under Settings → API Configuration. Once set, I'll be fully ready to guide you step by step!`),
@@ -74,9 +76,54 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- SESSION MANAGEMENT ---
+    let sessionId = existingSessionId;
+    if (process.env.DATABASE_URL) {
+      try {
+        const firstUserMsg = messages.find((m: any) => m.role === 'user');
+        const title = firstUserMsg ? deriveTitle(firstUserMsg.content) : 'New Chat';
+
+        if (!sessionId) {
+          // Create a new session
+          const [newSession] = await db.insert(chatSessions).values({
+            userId,
+            agentId: agent.id,
+            agentName: agent.nicheName,
+            title,
+          }).returning({ id: chatSessions.id });
+          sessionId = newSession.id;
+
+          // Save all existing user messages (the history sent from client)
+          for (const m of messages) {
+            await db.insert(chatMessages).values({
+              sessionId,
+              role: m.role,
+              content: m.content,
+            });
+          }
+        } else {
+          // Update updatedAt on existing session
+          await db.update(chatSessions)
+            .set({ updatedAt: new Date() })
+            .where(eq(chatSessions.id, sessionId));
+
+          // Save only the latest user message (last in array)
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg?.role === 'user') {
+            await db.insert(chatMessages).values({
+              sessionId,
+              role: 'user',
+              content: lastMsg.content,
+            });
+          }
+        }
+      } catch (sessionErr) {
+        console.error('[SESSION ERROR]', sessionErr);
+      }
+    }
+
     const systemPrompt = agent.systemPrompt || `You are ${agent.nicheName}, a specialized AI assistant. Always greet the user and ask step-by-step questions to understand their needs before providing help.`;
 
-    // Call OpenRouter with streaming
     const openrouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -87,10 +134,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: agent.providerModelId,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages
-        ],
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
         stream: true,
       }),
     });
@@ -108,7 +152,6 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'No response stream from OpenRouter.' }), { status: 500 });
     }
 
-    // Transform OpenRouter SSE → plain text stream that ai/react v2 useChat can read
     const encoder = new TextEncoder();
     const decoder = new TextDecoder('utf-8');
     let completionText = '';
@@ -118,18 +161,20 @@ export async function POST(req: Request) {
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        // Send sessionId as first line so client can track it
+        if (sessionId) {
+          controller.enqueue(encoder.encode(`\x00SESSION:${sessionId}\x00`));
+        }
+
         const reader = openrouterResponse.body!.getReader();
         let done = false;
-
         try {
           while (!done) {
             const { value, done: readerDone } = await reader.read();
             done = readerDone;
             if (!value) continue;
-
             const chunk = decoder.decode(value);
             const lines = chunk.split('\n').filter(l => l.trim());
-
             for (const line of lines) {
               const data = line.replace(/^data: /, '').trim();
               if (!data || data === '[DONE]') continue;
@@ -146,9 +191,19 @@ export async function POST(req: Request) {
         } finally {
           controller.close();
 
-          // Billing
+          // Save the assistant response + billing
           if (process.env.DATABASE_URL) {
             try {
+              // Save assistant message
+              if (sessionId) {
+                await db.insert(chatMessages).values({
+                  sessionId,
+                  role: 'assistant',
+                  content: completionText,
+                });
+              }
+
+              // Billing
               const completionTokens = Math.ceil(completionText.length / 4);
               const baseCost = ((promptTokensEst + completionTokens) * Number(agent.baseCostPer1k)) / 1000;
               const totalCost = baseCost * (1 + agent.profitMarginPercent / 100);
@@ -164,8 +219,8 @@ export async function POST(req: Request) {
                 outputTokens: completionTokens,
                 totalCostDeducted: totalCost.toString(),
               });
-            } catch (billingErr) {
-              console.error('[BILLING ERROR]', billingErr);
+            } catch (err) {
+              console.error('[POST-STREAM ERROR]', err);
             }
           }
         }
@@ -173,7 +228,10 @@ export async function POST(req: Request) {
     });
 
     return new Response(stream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Session-Id': sessionId || '',
+      }
     });
   } catch (error: any) {
     console.error("Chat API Error:", error);

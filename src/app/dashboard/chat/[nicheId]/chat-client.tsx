@@ -468,9 +468,15 @@ export function ChatClient({ nicheId, niche, isS3Configured: initialS3, walletBa
     fileInputRef.current?.click();
   };
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
   const { messages, input, handleInputChange, isLoading, setInput, append } = useChat({
     api: "/api/chat",
-    body: { nicheId: niche.id, generateImages },
+    body: { nicheId: niche.id, generateImages, sessionId },
+    onResponse: (res) => {
+      const sid = res.headers.get('X-Session-Id');
+      if (sid) setSessionId(sid);
+    },
     onError: (e) => {
       alert(`Chat Error: ${e.message}`);
     }

@@ -74,3 +74,21 @@ export const depositBonuses = pgTable('deposit_bonuses', {
   isBestValue: boolean('is_best_value').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const chatSessions = pgTable('chat_sessions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').notNull(),
+  agentId: uuid('agent_id').references(() => aiModels.id),
+  agentName: text('agent_name').notNull(),
+  title: text('title').notNull().default('New Chat'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const chatMessages = pgTable('chat_messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  sessionId: uuid('session_id').references(() => chatSessions.id, { onDelete: 'cascade' }).notNull(),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
