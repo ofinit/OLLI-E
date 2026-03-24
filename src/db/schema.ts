@@ -57,5 +57,19 @@ export const platformSettings = pgTable('platform_settings', {
   paypalClientId: text('paypal_client_id'),
   zwitchApiKey: text('zwitch_api_key'),
   instamojoAuthToken: text('instamojo_auth_token'),
+  globalMarkup: integer('global_markup').default(40).notNull(),
+  smartRounding: boolean('smart_rounding').default(true).notNull(),
+  wholesaleEnabled: boolean('wholesale_enabled').default(true).notNull(),
+  wholesaleThreshold: decimal('wholesale_threshold', { precision: 12, scale: 2 }).default("1000").notNull(),
+  wholesaleDiscountRate: integer('wholesale_discount_rate').default(15).notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const depositBonuses = pgTable('deposit_bonuses', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  depositAmount: decimal('deposit_amount', { precision: 12, scale: 2 }).notNull(),
+  bonusType: text('bonus_type').notNull(), // 'fixed' or 'percentage'
+  bonusValue: decimal('bonus_value', { precision: 12, scale: 2 }).notNull(),
+  isBestValue: boolean('is_best_value').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
