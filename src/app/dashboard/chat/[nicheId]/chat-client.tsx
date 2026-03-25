@@ -565,17 +565,18 @@ export function ChatClient({
 
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  const triggerDownload = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
+  const triggerDownload = (content: string, filename: string, mimeType: string) => {
+    // Use data: URI instead of blob: URL — Chrome respects `download` attribute
+    // on data: URIs, but may ignore it on blob: URLs due to security restrictions.
+    const encoded = encodeURIComponent(content);
+    const dataUri = `data:${mimeType};charset=utf-8,${encoded}`;
     const a = document.createElement('a');
-    a.href = url;
+    a.href = dataUri;
     a.download = filename;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    // Delay revoke so browser has time to initiate the download
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
 
   // Clean message content for export (strip internal markers)
@@ -584,7 +585,7 @@ export function ChatClient({
 
   const exportAsText = (content: string) => {
     const filename = `OLLI-E_${niche.nicheName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.txt`;
-    triggerDownload(new Blob([content], { type: 'text/plain;charset=utf-8' }), filename);
+    triggerDownload(content, filename, 'text/plain');
   };
 
   const exportAsHTML = (content: string) => {
@@ -627,7 +628,7 @@ export function ChatClient({
 </body>
 </html>`;
     const filename = `OLLI-E_${niche.nicheName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
-    triggerDownload(new Blob([html], { type: 'text/html;charset=utf-8' }), filename);
+    triggerDownload(html, filename, 'text/html');
   };
 
   const copyToClipboard = async (content: string, msgId: string) => {
