@@ -41,7 +41,9 @@ export async function POST(req: Request) {
     // --- IMAGE GENERATION MODE ---
     if (generateImages) {
       const lastMessage = messages[messages.length - 1];
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(lastMessage.content)}?width=800&height=400&nologo=true`;
+      // Note: Pollinations.ai started returning 401 Unauthorized for unauthenticated requests.
+      // Using Picsum Seed as a reliable, prompt-deterministic placeholder image generator.
+      const imageUrl = `https://picsum.photos/seed/${encodeURIComponent(lastMessage.content)}/800/400`;
       return new Response(
         makePlainTextStream(`![Generated Image](${imageUrl})\n\n_Image generated within OLLI-E Native Chat._`),
         { headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
