@@ -574,8 +574,13 @@ export function ChatClient({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Delay revoke so browser has time to initiate the download
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
+
+  // Clean message content for export (strip internal markers)
+  const cleanContent = (raw: string) =>
+    raw.replace(/\x00SESSION:[^\x00]+\x00/g, '').replace(/^SESSION:[a-f0-9-]+\s*/g, '').trim();
 
   const exportAsText = (content: string) => {
     const filename = `OLLI-E_${niche.nicheName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.txt`;
@@ -790,13 +795,13 @@ export function ChatClient({
                   {/* Export buttons for assistant messages */}
                   {m.role === "assistant" && (
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-8 text-[11px] text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 gap-1.5 px-2" onClick={() => exportAsText(m.content)}>
+                      <Button size="sm" variant="ghost" className="h-8 text-[11px] text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 gap-1.5 px-2" onClick={() => exportAsText(cleanContent(m.content))}>
                         <FileText className="h-3.5 w-3.5" /> .txt
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 text-[11px] text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 gap-1.5 px-2" onClick={() => exportAsHTML(m.content)}>
+                      <Button size="sm" variant="ghost" className="h-8 text-[11px] text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 gap-1.5 px-2" onClick={() => exportAsHTML(cleanContent(m.content))}>
                         <Code2 className="h-3.5 w-3.5" /> .html
                       </Button>
-                      <Button size="sm" variant="ghost" className={`h-8 text-[11px] gap-1.5 px-2 transition-all ${copyFeedback === m.id ? 'text-green-600 bg-green-50' : 'text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50'}`} onClick={() => copyToClipboard(m.content, m.id)}>
+                      <Button size="sm" variant="ghost" className={`h-8 text-[11px] gap-1.5 px-2 transition-all ${copyFeedback === m.id ? 'text-green-600 bg-green-50' : 'text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50'}`} onClick={() => copyToClipboard(cleanContent(m.content), m.id)}>
                         <Check className={`h-3.5 w-3.5 ${copyFeedback === m.id ? 'opacity-100' : 'opacity-0 absolute'}`} />
                         <Download className={`h-3.5 w-3.5 ${copyFeedback === m.id ? 'opacity-0 absolute' : 'opacity-100'}`} />
                         {copyFeedback === m.id ? 'Copied!' : 'Copy'}
