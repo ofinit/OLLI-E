@@ -776,7 +776,7 @@ export function ChatClient({
                       ? "bg-zinc-900 text-white"
                       : "bg-white border border-zinc-100 text-zinc-800 shadow-sm"
                   }`}>
-                    <MarkdownMessage content={m.content} isUser={m.role === 'user'} />
+                    <MarkdownMessage content={m.content.replace(/\x00SESSION:[^\x00]+\x00/g, '')} isUser={m.role === 'user'} />
                     
                     {/* Interactive Question Form — only for last assistant message */}
                     {questions && (

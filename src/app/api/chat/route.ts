@@ -161,11 +161,8 @@ export async function POST(req: Request) {
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
-        // Send sessionId as first line so client can track it
-        if (sessionId) {
-          controller.enqueue(encoder.encode(`\x00SESSION:${sessionId}\x00`));
-        }
-
+        // NOTE: sessionId is sent via X-Session-Id response header, NOT in the stream body
+        // This prevents it from being saved in the DB as part of the assistant message.
         const reader = openrouterResponse.body!.getReader();
         let done = false;
         try {
@@ -194,12 +191,13 @@ export async function POST(req: Request) {
           // Save the assistant response + billing
           if (process.env.DATABASE_URL) {
             try {
-              // Save assistant message
-              if (sessionId) {
+              // Save assistant message — strip any accidentally-injected SESSION markers
+              const cleanedText = completionText.replace(/\x00SESSION:[^\x00]+\x00/g, '').trim();
+              if (sessionId && cleanedText) {
                 await db.insert(chatMessages).values({
                   sessionId,
                   role: 'assistant',
-                  content: completionText,
+                  content: cleanedText,
                 });
               }
 
