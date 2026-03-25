@@ -92,6 +92,7 @@ export default async function ChatPage({ params, searchParams }: PageProps) {
 
   return (
     <ChatClient 
+      key={sessionId || "new"}
       nicheId={nicheId} 
       niche={niche} 
       isS3Configured={isS3Configured} 

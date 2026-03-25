@@ -488,7 +488,16 @@ export function ChatClient({
     body: { nicheId: niche.id, generateImages, sessionId },
     onResponse: (res) => {
       const sid = res.headers.get('X-Session-Id');
-      if (sid) setSessionId(sid);
+      if (sid) {
+        setSessionId(sid);
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          if (!url.searchParams.has('session')) {
+            url.searchParams.set('session', sid);
+            window.history.replaceState({}, '', url.toString());
+          }
+        }
+      }
     },
     onError: (e) => {
       alert(`Chat Error: ${e.message}`);
@@ -682,7 +691,7 @@ export function ChatClient({
     : undefined;
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-white overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-white text-zinc-900 relative">
       {/* Header */}
       <header className="h-16 border-b border-zinc-100 flex items-center justify-between px-6 bg-white shrink-0 z-20">
         <div className="flex items-center gap-4">
