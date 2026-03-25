@@ -565,20 +565,27 @@ export function ChatClient({
 
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  const triggerDownload = (content: string, filename: string) => {
-    // Chrome blocks `download` attr on data:text/html and data:text/plain for security.
-    // Using application/octet-stream forces a raw download and respects the filename.
-    const encoded = encodeURIComponent(content);
-    const dataUri = `data:application/octet-stream;charset=utf-8,${encoded}`;
-    const a = document.createElement('a');
-    a.href = dataUri;
-    a.download = filename;
-    a.rel = 'noopener';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    // Small delay before removing to ensure click registers
-    setTimeout(() => document.body.removeChild(a), 100);
+  // Server-side download: browser ALWAYS respects Content-Disposition from a real HTTP response
+  const triggerServerDownload = async (content: string, filename: string, type: "txt" | "html") => {
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, filename, type }),
+      });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (err) {
+      alert('Download failed. Please try Copy instead.');
+    }
   };
 
   // Clean message content for export (strip internal markers)
@@ -587,7 +594,7 @@ export function ChatClient({
 
   const exportAsText = (content: string) => {
     const filename = `OLLI-E_${niche.nicheName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.txt`;
-    triggerDownload(content, filename);
+    triggerServerDownload(content, filename, 'txt');
   };
 
   const exportAsHTML = (content: string) => {
@@ -630,7 +637,7 @@ export function ChatClient({
 </body>
 </html>`;
     const filename = `OLLI-E_${niche.nicheName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
-    triggerDownload(html, filename);
+    triggerServerDownload(html, filename, 'html');
   };
 
   const copyToClipboard = async (content: string, msgId: string) => {
