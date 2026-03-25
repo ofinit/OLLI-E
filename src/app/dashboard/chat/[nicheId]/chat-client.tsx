@@ -565,27 +565,28 @@ export function ChatClient({
 
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  // Server-side download: browser ALWAYS respects Content-Disposition from a real HTTP response
-  const triggerServerDownload = async (content: string, filename: string, type: "txt" | "html") => {
-    try {
-      const res = await fetch('/api/download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, filename, type }),
-      });
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    } catch (err) {
-      alert('Download failed. Please try Copy instead.');
-    }
+  // Most reliable download: hidden form POST → server sets Content-Disposition: attachment
+  // Bypasses ALL Chrome blob/data: URI security restrictions
+  const triggerServerDownload = (content: string, filename: string, type: "txt" | "html") => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/download';
+
+    const addField = (name: string, value: string) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    };
+
+    addField('content', content);
+    addField('filename', filename);
+    addField('type', type);
+
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => document.body.removeChild(form), 1000);
   };
 
   // Clean message content for export (strip internal markers)

@@ -2,7 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { content, filename, type } = await req.json();
+    let content = '';
+    let filename = 'download.txt';
+    let type = 'txt';
+
+    const contentType = req.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const body = await req.json();
+      content = body.content;
+      filename = body.filename;
+      type = body.type;
+    } else {
+      // Parse form submission (hidden form POST)
+      const formData = await req.formData();
+      content = formData.get('content') as string;
+      filename = formData.get('filename') as string;
+      type = formData.get('type') as string;
+    }
 
     if (!content || !filename) {
       return NextResponse.json({ error: "Missing content or filename" }, { status: 400 });
