@@ -312,21 +312,23 @@ function parseQuestions(content: string): Question[] | null {
       const hint = hintMatch ? hintMatch[1] : undefined;
       const text = hintMatch ? raw.slice(0, hintMatch.index).trim().replace(/:?\s*$/, '') : raw.replace(/:?\s*$/, '');
 
-      // Collect bullet options immediately after
+      // Collect bullet options immediately after, skipping empty lines or non-bullet lines and stopping at the next question
       const options: string[] = [];
       let j = i + 1;
       while (j < lines.length) {
         const optLine = lines[j].trim();
+        
+        // If we hit the next question, stop looking for options for this one
+        if (/^\d+\.\s+/.test(optLine)) {
+          break;
+        }
+
         const optMatch = optLine.match(/^[-\*•]\s+(.+)/);
         if (optMatch) {
           options.push(optMatch[1].replace(/\*\*/g, ''));
-          j++;
-        } else if (optLine === '') {
-          j++;
-          break;
-        } else {
-          break;
         }
+        
+        j++;
       }
 
       const type = options.length > 0

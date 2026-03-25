@@ -121,6 +121,9 @@ export default function Sidebar({
             <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
               <div className="flex items-center justify-between px-3">
                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Chat History</span>
+                <Link href="/dashboard/history" className="text-[10px] font-bold text-zinc-400 hover:text-black transition-colors uppercase tracking-wider">
+                  See All
+                </Link>
               </div>
 
               {loadingSessions && (
