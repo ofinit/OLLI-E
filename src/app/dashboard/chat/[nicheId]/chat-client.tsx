@@ -9,7 +9,7 @@ import {
   Youtube, BarChart, Search, UserCircle, 
   Sparkles, Languages, Layers, Terminal, 
   Palette, Cpu, Mic, MicOff, Download, FileText, Code2, Coins, Box, MessageSquare,
-  Github, Image as ImageIcon
+  Github, Image as ImageIcon, Maximize2, Minimize2
 } from "lucide-react";
 import Link from "next/link";
 import { useChat } from "ai/react";
@@ -153,7 +153,51 @@ function renderInline(text: string): React.ReactNode[] {
   return parts;
 }
 
-function MarkdownMessage({ content, isUser }: { content: string; isUser: boolean }) {
+  function CodeBlock({ code, lang }: { code: string; lang: string }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const preRef = useRef<HTMLPreElement>(null);
+    const [shouldShowToggle, setShouldShowToggle] = useState(false);
+
+    useEffect(() => {
+      if (preRef.current) {
+        // Only show toggle if content is taller than 320px + some buffer
+        setShouldShowToggle(preRef.current.scrollHeight > 324);
+      }
+    }, [code]);
+
+    return (
+      <div className="my-3 rounded-xl overflow-hidden border border-zinc-200 group relative bg-zinc-900 shadow-sm transition-all duration-300">
+        <div className="bg-zinc-800/50 backdrop-blur-sm px-4 py-1.5 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex justify-between items-center border-b border-zinc-700/50">
+          <span>{lang || 'code'}</span>
+          {shouldShowToggle && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="hover:text-white transition-colors flex items-center gap-1.5 bg-zinc-700/50 px-2 py-0.5 rounded-md hover:bg-zinc-700 active:scale-95 transition-all"
+            >
+              {isExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </button>
+          )}
+        </div>
+        <div className="relative">
+          <pre 
+            ref={preRef}
+            className={`text-green-300 p-4 overflow-x-auto text-[13px] leading-relaxed font-mono whitespace-pre transition-all duration-300 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent ${!isExpanded ? 'max-h-[320px] overflow-y-auto' : ''}`}
+            style={{ maxHeight: isExpanded ? 'none' : '320px' }}
+          >
+            {code}
+          </pre>
+          {!isExpanded && shouldShowToggle && (
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-900 to-transparent pointer-events-none flex items-end justify-center pb-2">
+              <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Scroll to view more</div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function MarkdownMessage({ content, isUser }: { content: string; isUser: boolean }) {
   if (isUser) {
     return <span className="whitespace-pre-wrap break-words">{content}</span>;
   }
@@ -200,12 +244,7 @@ function MarkdownMessage({ content, isUser }: { content: string; isUser: boolean
   const flushCode = (key: number) => {
     if (codeBuffer.length === 0) return;
     nodes.push(
-      <div key={`code-${key}`} className="my-3 rounded-xl overflow-hidden border border-zinc-200">
-        {codeLang && <div className="bg-zinc-800 px-4 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{codeLang}</div>}
-        <pre className="bg-zinc-900 text-green-300 p-4 overflow-x-auto text-[13px] leading-relaxed font-mono whitespace-pre">
-          {codeBuffer.join('\n')}
-        </pre>
-      </div>
+      <CodeBlock key={`code-${key}`} code={codeBuffer.join('\n')} lang={codeLang} />
     );
     codeBuffer = [];
     codeLang = '';
