@@ -208,6 +208,7 @@ function renderInline(text: string): React.ReactNode[] {
   let bulletBuffer: string[] = [];
   let orderedBuffer: { num: string; text: string }[] = [];
   let codeBuffer: string[] = [];
+  let tableBuffer: string[] = [];
   let inCode = false;
   let codeLang = '';
 
@@ -250,13 +251,50 @@ function renderInline(text: string): React.ReactNode[] {
     codeLang = '';
   };
 
+  const flushTable = (key: number) => {
+    if (tableBuffer.length < 2) return;
+    const parseCells = (row: string) => {
+      let cells = row.trim().split('|');
+      if (cells[0] === '') cells.shift();
+      if (cells[cells.length - 1] === '') cells.pop();
+      return cells.map(c => c.trim());
+    };
+
+    const headers = parseCells(tableBuffer[0]);
+    const bodyRows = tableBuffer.slice(2).map(row => parseCells(row));
+
+    nodes.push(
+      <div key={`table-${key}`} className="my-4 overflow-x-auto rounded-xl border border-zinc-200 shadow-sm bg-white">
+        <table className="w-full text-sm text-left border-collapse min-w-[400px]">
+          <thead className="bg-zinc-50 border-b border-zinc-200">
+            <tr>
+              {headers.map((h, hi) => (
+                <th key={hi} className="px-4 py-3 font-black text-zinc-900 uppercase tracking-widest text-[10px] whitespace-nowrap">{renderInline(h)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100">
+            {bodyRows.map((row, ri) => (
+              <tr key={ri} className="hover:bg-zinc-50/50 transition-colors">
+                {row.map((cell, ci) => (
+                  <td key={ci} className="px-4 py-3 text-zinc-600 leading-relaxed font-medium">{renderInline(cell)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+    tableBuffer = [];
+  };
+
   while (i < lines.length) {
     const line = lines[i];
 
     // Code fence
     if (line.startsWith('```')) {
       if (!inCode) {
-        flushBullets(i); flushOrdered(i);
+        flushBullets(i); flushOrdered(i); flushTable(i);
         inCode = true;
         codeLang = line.slice(3).trim();
       } else {
@@ -272,7 +310,7 @@ function renderInline(text: string): React.ReactNode[] {
     const h2 = line.match(/^##\s+(.+)/);
     const h1 = line.match(/^#\s+(.+)/);
     if (h1 || h2 || h3) {
-      flushBullets(i); flushOrdered(i);
+      flushBullets(i); flushOrdered(i); flushTable(i);
       const text = (h1 || h2 || h3)![1];
       if (h1) nodes.push(<h1 key={i} className="text-xl font-black text-zinc-900 mt-5 mb-2 tracking-tight">{renderInline(text)}</h1>);
       else if (h2) nodes.push(<h2 key={i} className="text-lg font-black text-zinc-900 mt-4 mb-1.5 tracking-tight">{renderInline(text)}</h2>);
@@ -282,15 +320,24 @@ function renderInline(text: string): React.ReactNode[] {
 
     // Horizontal rule
     if (/^---+$/.test(line.trim())) {
-      flushBullets(i); flushOrdered(i);
+      flushBullets(i); flushOrdered(i); flushTable(i);
       nodes.push(<hr key={i} className="my-4 border-zinc-100" />);
       i++; continue;
+    }
+
+    // Table line
+    if (line.trim().startsWith('|') && line.trim().includes('|')) {
+      flushBullets(i); flushOrdered(i);
+      tableBuffer.push(line.trim());
+      i++; continue;
+    } else if (tableBuffer.length > 0) {
+      flushTable(i);
     }
 
     // Bullets
     const bullet = line.match(/^[\-\*\•]\s+(.+)/);
     if (bullet) {
-      flushOrdered(i);
+      flushOrdered(i); flushTable(i);
       bulletBuffer.push(bullet[1]);
       i++; continue;
     }
@@ -298,20 +345,20 @@ function renderInline(text: string): React.ReactNode[] {
     // Ordered list
     const ordered = line.match(/^(\d+)\.\s+(.+)/);
     if (ordered) {
-      flushBullets(i);
+      flushBullets(i); flushTable(i);
       orderedBuffer.push({ num: ordered[1], text: ordered[2] });
       i++; continue;
     }
 
     // Blank line
     if (line.trim() === '') {
-      flushBullets(i); flushOrdered(i);
+      flushBullets(i); flushOrdered(i); flushTable(i);
       nodes.push(<div key={`br-${i}`} className="h-2" />);
       i++; continue;
     }
 
     // Regular paragraph
-    flushBullets(i); flushOrdered(i);
+    flushBullets(i); flushOrdered(i); flushTable(i);
     nodes.push(<p key={i} className="leading-relaxed text-[15px]">{renderInline(line)}</p>);
     i++;
   }
@@ -319,6 +366,7 @@ function renderInline(text: string): React.ReactNode[] {
   flushBullets(lines.length);
   flushOrdered(lines.length);
   flushCode(lines.length);
+  flushTable(lines.length);
 
   return <div className="space-y-0.5">{nodes}</div>;
 }
