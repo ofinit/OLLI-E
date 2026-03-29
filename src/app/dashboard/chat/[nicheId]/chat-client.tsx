@@ -385,36 +385,46 @@ function parseQuestions(content: string): Question[] | null {
   const lines = content.split('\n');
   const questions: Question[] = [];
   let i = 0;
+  let qCount = 0;
 
   while (i < lines.length) {
-    const line = lines[i];
-    const qMatch = line.match(/^(\d+)\.\s+(.+)/);
+    const line = lines[i].trim();
+    
+    // Pattern 1: Numbered "1. Question?"
+    // Pattern 2: Blockquote "> Question?" or "> Do you..."
+    const qMatch = line.match(/^(\d+)\.\s+(.+)/) || line.match(/^>\s*([^-\*•].+\?.*)/);
+    
     if (qMatch) {
-      const num = parseInt(qMatch[1]);
-      let raw = qMatch[2];
-      // strip bold markers
-      raw = raw.replace(/\*\*/g, '').replace(/__/g, '');
-      // split hint from question
+      qCount++;
+      // Determine question text and ordinal
+      const num = (qMatch[1] && !isNaN(parseInt(qMatch[1]))) ? parseInt(qMatch[1]) : qCount;
+      let raw = (qMatch[1] && !isNaN(parseInt(qMatch[1]))) ? qMatch[2] : qMatch[1] || qMatch[0];
+      
+      // Clean up raw text (strip initial > and markdown)
+      raw = raw.replace(/^>\s*/, '').replace(/\*\*/g, '').replace(/__/g, '').trim();
+      
       const hintMatch = raw.match(/\(([^)]{5,})\)\s*$/);
       const hint = hintMatch ? hintMatch[1] : undefined;
       const text = hintMatch ? raw.slice(0, hintMatch.index).trim().replace(/:?\s*$/, '') : raw.replace(/:?\s*$/, '');
 
-      // Collect bullet options immediately after, skipping empty lines or non-bullet lines and stopping at the next question
       const options: string[] = [];
       let j = i + 1;
       while (j < lines.length) {
         const optLine = lines[j].trim();
+        if (optLine === '') { j++; continue; }
         
-        // If we hit the next question, stop looking for options for this one
-        if (/^\d+\.\s+/.test(optLine)) {
+        // Stop if we hit another potential question
+        if (/^\d+\.\s+/.test(optLine) || (/^>\s*[^-\*•]/.test(optLine) && optLine.includes('?'))) {
           break;
         }
 
-        const optMatch = optLine.match(/^[-\*•]\s+(.+)/);
+        const optMatch = optLine.match(/^>\s*[-\*•]\s+(.+)/) || optLine.match(/^[-\*•]\s+(.+)/);
         if (optMatch) {
-          options.push(optMatch[1].replace(/\*\*/g, ''));
+          options.push(optMatch[1].replace(/\*\*/g, '').trim());
+        } else {
+          // If we have options, any non-option line ends the list
+          if (options.length > 0) break;
         }
-        
         j++;
       }
 
@@ -423,13 +433,13 @@ function parseQuestions(content: string): Question[] | null {
         : 'text';
 
       questions.push({ num, text, hint, options: options.length > 0 ? options : undefined, type });
-      i = j;
+      i = Math.max(i + 1, j);
     } else {
       i++;
     }
   }
 
-  return questions.length >= 2 ? questions : null;
+  return questions.length >= 1 ? questions : null;
 }
 
 // ─── Interactive Question Form ─────────────────────────────────────────────
@@ -437,10 +447,15 @@ function QuestionForm({ questions, onSubmit }: { questions: Question[]; onSubmit
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [selected, setSelected] = useState<Record<number, string[]>>({});
 
-  const toggleOption = (qNum: number, opt: string) => {
+  const toggleOption = (qNum: number, opt: string, isMultiselect: boolean) => {
     setSelected(prev => {
       const curr = prev[qNum] || [];
-      const updated = curr.includes(opt) ? curr.filter(o => o !== opt) : [...curr, opt];
+      let updated;
+      if (isMultiselect) {
+        updated = curr.includes(opt) ? curr.filter(o => o !== opt) : [...curr, opt];
+      } else {
+        updated = [opt];
+      }
       // sync to answers
       setAnswers(a => ({ ...a, [qNum]: updated.join(', ') }));
       return { ...prev, [qNum]: updated };
@@ -458,70 +473,77 @@ function QuestionForm({ questions, onSubmit }: { questions: Question[]; onSubmit
   };
 
   return (
-    <div className="mt-4 space-y-5 border-t border-zinc-100 pt-4">
+    <div className="mt-6 space-y-6 border-t border-zinc-100 pt-6 animate-in fade-in slide-in-from-top-2 duration-500">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Interactive Clarification</span>
+      </div>
+      
       {questions.map(q => (
-        <div key={q.num} className="space-y-2">
-          <p className="text-sm font-semibold text-zinc-800">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-zinc-900 text-white text-[10px] font-bold mr-2">{q.num}</span>
-            {q.text}
+        <div key={q.num} className="space-y-3">
+          <p className="text-[15px] font-bold text-zinc-900 leading-snug flex items-start gap-3">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-zinc-900 text-white text-[11px] font-black shrink-0 mt-0.5 shadow-sm">{q.num}</span>
+            <span className="pt-0.5">{q.text}</span>
           </p>
-          {q.hint && <p className="text-xs text-zinc-400 ml-7">e.g. {q.hint}</p>}
+          {q.hint && <p className="text-xs text-zinc-400 ml-9 bg-zinc-50 px-3 py-1.5 rounded-lg border border-zinc-100 inline-block">Hint: {q.hint}</p>}
 
           {q.options ? (
-            <div className="ml-7 flex flex-wrap gap-2">
+            <div className="ml-9 flex flex-wrap gap-2.5">
               {q.options.map(opt => {
                 const isSelected = (selected[q.num] || []).includes(opt);
                 return (
                   <button
                     key={opt}
                     type="button"
-                    onClick={() => toggleOption(q.num, opt)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    onClick={() => toggleOption(q.num, opt, q.type === 'multiselect')}
+                    className={`px-4 py-2 rounded-xl text-[13px] font-bold border transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-sm ${
                       isSelected
-                        ? 'bg-zinc-900 text-white border-zinc-900'
-                        : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
+                        ? 'bg-zinc-900 text-white border-zinc-900 shadow-zinc-200'
+                        : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50'
                     }`}
                   >
-                    {isSelected && <span className="mr-1">✓</span>}
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-white bg-white' : 'border-zinc-300'}`}>
+                      {isSelected && <Check className="h-2.5 w-2.5 text-zinc-900 stroke-[4]" />}
+                    </div>
                     {opt}
                   </button>
                 );
               })}
-              {/* Allow typing if "other" or to supplement */}
+              {/* Allow typing to supplement or override */}
               <input
                 type="text"
-                placeholder="or type your answer…"
-                value={answers[q.num] && !q.options!.some(o => (selected[q.num] || []).includes(o)) ? answers[q.num] : ''}
+                placeholder="Other answer…"
+                value={(answers[q.num] && !q.options!.some(o => (selected[q.num] || []).includes(o))) ? answers[q.num] : ''}
                 onChange={e => {
                   const val = e.target.value;
                   setAnswers(a => ({ ...a, [q.num]: val }));
                   if (val) setSelected(s => ({ ...s, [q.num]: [] }));
                 }}
-                className="px-3 py-1.5 rounded-full text-xs border border-dashed border-zinc-300 bg-white text-zinc-800 outline-none focus:border-zinc-500 w-40 placeholder:text-zinc-300"
+                className="px-4 py-2 rounded-xl text-[13px] font-medium border border-dashed border-zinc-300 bg-zinc-50/50 text-zinc-800 outline-none focus:border-zinc-500 focus:bg-white w-48 placeholder:text-zinc-300 transition-all font-mono"
               />
             </div>
           ) : (
             <input
               type="text"
-              placeholder="Type your answer here…"
+              placeholder="Type your response here…"
               value={answers[q.num] || ''}
               onChange={e => setAnswers(a => ({ ...a, [q.num]: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter' && canSubmit) { e.preventDefault(); handleSubmit(); } }}
-              className="ml-7 w-[calc(100%-1.75rem)] border border-zinc-200 rounded-xl px-4 py-2 text-sm text-zinc-800 outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-400 placeholder:text-zinc-300 bg-white transition-all"
+              className="ml-9 w-[calc(100%-2.25rem)] border border-zinc-200 rounded-2xl px-5 py-3 text-[15px] text-zinc-900 outline-none focus:ring-4 focus:ring-zinc-900/5 focus:border-zinc-400 placeholder:text-zinc-300 bg-zinc-50/30 transition-all font-medium"
             />
           )}
         </div>
       ))}
 
-      <div className="ml-7">
+      <div className="ml-9 pt-2">
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 text-white text-xs font-black uppercase tracking-widest disabled:opacity-30 hover:bg-black transition-all shadow"
+          className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-zinc-900 text-white text-[11px] font-black uppercase tracking-[0.2em] disabled:opacity-20 hover:bg-black hover:shadow-xl hover:-translate-y-0.5 transition-all shadow-lg active:translate-y-0"
         >
-          <Send className="h-3.5 w-3.5" />
-          Send Answers
+          <Send className="h-4 w-4" />
+          Finalize & Send Response
         </button>
       </div>
     </div>
