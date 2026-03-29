@@ -9,7 +9,7 @@ import {
   Youtube, BarChart, Search, UserCircle, 
   Sparkles, Languages, Layers, Terminal, 
   Palette, Cpu, Mic, MicOff, Download, FileText, Code2, Coins, Box, MessageSquare,
-  Github, Image as ImageIcon, Maximize2, Minimize2
+  Github, Image as ImageIcon, Maximize2, Minimize2, Pencil, Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { useChat } from "ai/react";
@@ -578,6 +578,9 @@ export function ChatClient({
   const [showPowerMenu, setShowPowerMenu] = useState(false);
   const [generateImages, setGenerateImages] = useState(false);
   const [answeredMsgIds, setAnsweredMsgIds] = useState<Set<string>>(new Set());
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<unknown>(null);
@@ -591,7 +594,7 @@ export function ChatClient({
 
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId || null);
 
-  const { messages, input, handleInputChange, isLoading, setInput, append } = useChat({
+  const { messages, input, handleInputChange, isLoading, setInput, append, setMessages } = useChat({
     api: "/api/chat",
     initialMessages,
     body: { nicheId: niche.id, generateImages, sessionId },
@@ -612,6 +615,38 @@ export function ChatClient({
       alert(`Chat Error: ${e.message}`);
     }
   });
+
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const res = await fetch('/api/chat-messages', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId }),
+      });
+      if (res.ok) {
+        setMessages(messages.filter(m => m.id !== messageId));
+      }
+    } catch (err) {
+      console.error('Delete failed', err);
+    }
+  };
+
+  const handleUpdateMessage = async (messageId: string) => {
+    if (!editContent.trim()) return;
+    try {
+      const res = await fetch('/api/chat-messages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, content: editContent }),
+      });
+      if (res.ok) {
+        setMessages(messages.map(m => m.id === messageId ? { ...m, content: editContent } : m));
+        setEditingMessageId(null);
+      }
+    } catch (err) {
+      console.error('Update failed', err);
+    }
+  };
 
   // Stable scroll: only auto-scroll if user is already near the bottom (within 120px).
   // Uses instant scroll (no smooth) during streaming to prevent the shake.
@@ -681,7 +716,6 @@ export function ChatClient({
     }
   };
 
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Most reliable download: hidden form POST → server sets Content-Disposition: attachment
   // Bypasses ALL Chrome blob/data: URI security restrictions
@@ -911,22 +945,58 @@ export function ChatClient({
                 <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${m.role === "assistant" ? "bg-black text-white" : "bg-zinc-100 text-zinc-600"}`}>
                   {m.role === "assistant" ? "K" : "U"}
                 </div>
-                <div className="flex flex-col gap-2 max-w-[85%] min-w-0">
-                  <div className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed break-words overflow-hidden ${
+                <div className="flex flex-col gap-2 max-w-[85%] min-w-0 group/msg relative">
+                  <div className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed break-words overflow-hidden relative ${
                     m.role === "user"
                       ? "bg-zinc-900 text-white"
                       : "bg-white border border-zinc-100 text-zinc-800 shadow-sm"
                   }`}>
-                    <MarkdownMessage content={m.content.replace(/\x00SESSION:[^\x00]+\x00/g, '')} isUser={m.role === 'user'} />
-                    
-                    {/* Interactive Question Form — only for last assistant message */}
-                    {questions && (
-                      <QuestionForm
-                        questions={questions}
-                        onSubmit={(answers) => handleQuestionFormSubmit(m.id, answers)}
-                      />
+                    {editingMessageId === m.id ? (
+                      <div className="space-y-4">
+                        <textarea
+                          autoFocus
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full bg-zinc-800 text-white border border-zinc-700 rounded-xl p-3 text-[15px] outline-none focus:ring-2 focus:ring-white/20 min-h-[100px] resize-none"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-white/10 text-[11px] font-bold" onClick={() => setEditingMessageId(null)}>Cancel</Button>
+                          <Button size="sm" className="bg-white text-zinc-900 hover:bg-zinc-200 text-[11px] font-bold rounded-lg" onClick={() => handleUpdateMessage(m.id)}>Save Changes</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <MarkdownMessage content={m.content.replace(/\x00SESSION:[^\x00]+\x00/g, '')} isUser={m.role === 'user'} />
+                        
+                        {/* Interactive Question Form — only for last assistant message */}
+                        {questions && (
+                          <QuestionForm
+                            questions={questions}
+                            onSubmit={(answers) => handleQuestionFormSubmit(m.id, answers)}
+                          />
+                        )}
+                      </>
                     )}
                   </div>
+
+                  {m.role === "user" && editingMessageId !== m.id && (
+                    <div className="flex gap-2 opacity-0 group-hover/msg:opacity-100 transition-opacity justify-end pr-2">
+                       <button 
+                        onClick={() => { setEditingMessageId(m.id); setEditContent(m.content); }}
+                        className="p-1.5 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-600 transition-all"
+                        title="Edit message"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteMessage(m.id)}
+                        className="p-1.5 hover:bg-red-50 rounded-lg text-zinc-400 hover:text-red-600 transition-all"
+                        title="Delete message"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Export buttons for assistant messages */}
                   {m.role === "assistant" && (
