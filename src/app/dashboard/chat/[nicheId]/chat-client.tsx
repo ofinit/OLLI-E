@@ -581,6 +581,7 @@ export function ChatClient({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [shareFeedback, setShareFeedback] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<unknown>(null);
@@ -763,6 +764,12 @@ export function ChatClient({
     triggerServerDownload(code, filename, 'txt');
   };
 
+  const exportAsMarkdown = (rawContent: string) => {
+    const { code } = extractCode(rawContent);
+    const filename = `OLLI-E_${niche.nicheName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.md`;
+    triggerServerDownload(code, filename, 'txt');
+  };
+
   const exportAsHTML = (rawContent: string) => {
     const { lang, code } = extractCode(rawContent);
 
@@ -822,6 +829,28 @@ export function ChatClient({
     }
   };
 
+  const handleShareChat = async () => {
+    try {
+      const url = window.location.href;
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setShareFeedback(true);
+      setTimeout(() => setShareFeedback(false), 2000);
+    } catch {
+      alert('Share failed. Please copy the URL manually.');
+    }
+  };
+
 
   let promptList = DEFAULT_PROMPTS;
   const matchName = niche.nicheName.toLowerCase().replace(" ", "-");
@@ -867,6 +896,15 @@ export function ChatClient({
             className="h-10 px-4 rounded-xl flex items-center gap-2 text-zinc-600 hover:text-black hover:bg-zinc-50 border border-transparent hover:border-zinc-100 transition-all font-black uppercase tracking-widest text-[10px]"
           >
             <Plug className="h-4 w-4" /> Connectivity
+          </Button>
+
+          <Button 
+            variant="ghost" 
+            onClick={handleShareChat}
+            className={`h-10 px-4 rounded-xl flex items-center gap-2 transition-all font-black uppercase tracking-widest text-[10px] ${shareFeedback ? 'text-green-600 bg-green-50' : 'text-zinc-600 hover:text-black hover:bg-zinc-50 border border-transparent hover:border-zinc-100'}`}
+          >
+            {shareFeedback ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+            {shareFeedback ? 'Copied Link' : 'Share Chat'}
           </Button>
 
           <Dialog open={showIntegrations} onOpenChange={setShowIntegrations}>
@@ -1003,6 +1041,9 @@ export function ChatClient({
                     <div className="flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 text-[11px] text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 gap-1.5 px-2" onClick={() => exportAsText(cleanContent(m.content))}>
                         <FileText className="h-3.5 w-3.5" /> .txt
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 text-[11px] text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 gap-1.5 px-2" onClick={() => exportAsMarkdown(cleanContent(m.content))}>
+                        <FileText className="h-3.5 w-3.5" /> .md
                       </Button>
                       <Button size="sm" variant="ghost" className="h-8 text-[11px] text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 gap-1.5 px-2" onClick={() => exportAsHTML(cleanContent(m.content))}>
                         <Code2 className="h-3.5 w-3.5" /> .html
